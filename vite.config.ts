@@ -48,8 +48,19 @@ export default defineConfig(({ mode }) => {
       },
     },
     preview: {
+      // Bind to all interfaces so the platform's load balancer can
+      // route traffic to the container. Railway injects PORT at
+      // runtime; the `start` script in package.json already passes
+      // --host/--port, but mirroring it here keeps the config honest.
+      host: true,
       port: 5174,
-      strictPort: true,
+      strictPort: false,
+      // Allow any host: in production the request arrives with the
+      // Railway-generated subdomain (or our custom domain) in the
+      // Host header, and Vite 6 rejects unknown hosts by default with
+      // a 403. The Console is gated by authentication anyway, and the
+      // request would have already passed the CDN / proxy ACL.
+      allowedHosts: true,
     },
     build: {
       outDir: "dist",
