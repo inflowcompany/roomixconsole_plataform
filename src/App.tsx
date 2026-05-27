@@ -55,13 +55,21 @@ function Router() {
     .join("")
     .toUpperCase();
 
+  // Resolve the SaaS origin from the Vite env. Defaults to localhost
+  // for the dev workflow (vite proxy), and gets replaced at build time
+  // with the production URL via VITE_ROOMIX_API_BASE on Railway. We
+  // never want this URL to leak as a hardcoded "localhost" in the
+  // production bundle.
+  const env = ((import.meta as { env?: Record<string, string> }).env || {});
+  const saasOrigin = env.VITE_ROOMIX_API_BASE || "http://localhost:3000";
+
   const openInSaaS = (propertyId?: string | null) => {
     // Deep-link the operator to the SaaS in a NEW TAB with the
     // propertyId in the query. We never pass tokens or sessions in the
     // URL — the SaaS already has the same first-party cookie because
     // both apps share the SaaS origin (proxy in dev, same auth domain
     // in prod).
-    const url = new URL("http://localhost:3000/");
+    const url = new URL(saasOrigin + "/");
     if (propertyId) url.searchParams.set("propertyId", propertyId);
     window.open(url.toString(), "_blank", "noopener,noreferrer");
   };
@@ -70,7 +78,7 @@ function Router() {
   // production (Railway / Vercel / any non-localhost host) we surface
   // "Produção" so the operator never confuses environments; in dev /
   // homologation we keep the calmer "Homologação segura".
-  const envFlag = ((import.meta as { env?: Record<string, string> }).env || {}).VITE_PLATFORM_CONSOLE_ENV;
+  const envFlag = env.VITE_PLATFORM_CONSOLE_ENV;
   const environmentLabel =
     typeof envFlag === "string" && envFlag.toLowerCase() === "production"
       ? "Produção"
@@ -81,6 +89,7 @@ function Router() {
       superadminName={user.name || user.email}
       superadminInitials={initials}
       environmentLabel={environmentLabel}
+      saasOrigin={saasOrigin}
       onImpersonateProperty={(_name, propertyId) => openInSaaS(propertyId)}
       onExitConsole={() => void logout()}
     />
