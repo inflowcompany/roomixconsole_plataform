@@ -67,6 +67,15 @@ const safeJsonParse = (text: string): Record<string, unknown> => {
   }
 };
 
+export interface PasswordResetRequestInput {
+  email: string;
+}
+
+export interface PasswordResetConfirmInput {
+  token: string;
+  password: string;
+}
+
 export const authApi = {
   async login(input: LoginInput): Promise<{ user: PlatformConsoleUser }> {
     return json<{ user: PlatformConsoleUser }>("/api/auth/login", {
@@ -87,6 +96,23 @@ export const authApi = {
     return json<{ ok: boolean }>("/api/auth/logout", {
       method: "POST",
     });
+  },
+  // ---- Password reset --------------------------------------------------
+  // Both endpoints are PUBLIC on the SaaS side (no session). The request
+  // endpoint always responds 200 neutral to avoid user enumeration. The
+  // confirm endpoint returns RESET_TOKEN_INVALID / PASSWORD_TOO_SHORT
+  // etc only after the operator submitted a token.
+  async passwordResetRequest(input: PasswordResetRequestInput): Promise<{ ok: boolean; message: string }> {
+    return json<{ ok: boolean; message: string }>(
+      "/api/platform/auth/password-reset/request",
+      { method: "POST", body: JSON.stringify(input) },
+    );
+  },
+  async passwordResetConfirm(input: PasswordResetConfirmInput): Promise<{ ok: boolean; message: string }> {
+    return json<{ ok: boolean; message: string }>(
+      "/api/platform/auth/password-reset/confirm",
+      { method: "POST", body: JSON.stringify(input) },
+    );
   },
 };
 
