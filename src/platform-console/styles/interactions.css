@@ -1,0 +1,1201 @@
+/* Roomix Platform Console — interactive surfaces.
+   Scoped under #platform-console-root via the existing root selector.
+   Loaded after platform-console.css so it can extend its tokens. */
+
+/* ---- Modal ------------------------------------------------------ */
+
+.pc-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 7, 10, 0.6);
+  backdrop-filter: blur(6px);
+  z-index: 80;
+  display: grid;
+  place-items: start center;
+  padding-top: 8vh;
+  animation: pc-fadein 120ms;
+}
+
+@keyframes pc-fadein {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.pc-modal {
+  background: var(--surface-1);
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.02);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 14vh);
+  color: var(--text);
+}
+
+.pc-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.pc-modal-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  display: grid;
+  place-items: center;
+  color: var(--text-hi);
+  flex-shrink: 0;
+}
+
+.pc-modal-title {
+  font-size: 13.5px;
+  color: var(--text-hi);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+.pc-modal-sub {
+  font-size: 11.5px;
+  color: var(--text-mute);
+  margin-top: 3px;
+}
+
+.pc-modal-close {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.pc-modal-close:hover {
+  background: var(--surface-2);
+  color: var(--text-hi);
+}
+
+.pc-modal-body {
+  padding: 18px 20px 22px;
+  overflow: auto;
+  flex: 1 1 auto;
+  /* Subtle inner surface so the dense form (sections, modules, channels,
+     estimate) reads as a single anchored sheet instead of free-floating
+     text over the backdrop. Slightly lighter than the modal shell so
+     the cards/panels inside still pop. */
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.018) 0%, rgba(255, 255, 255, 0) 240px),
+    #0E1319;
+}
+
+.pc-modal-foot {
+  padding: 14px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  align-items: center;
+  /* Opaque footer so the primary button never gets washed out by the
+     scroll gradient bleeding from the body. */
+  background: #0B0F14;
+  position: sticky;
+  bottom: 0;
+}
+
+/* When the modal embeds a form, give every "pc-field-row" + section
+   header a touch more breathing room without changing the design. */
+.pc-modal-body .pc-field,
+.pc-modal-body .pc-field-row {
+  /* Section background is already provided by the body; keep fields
+     transparent so they layer cleanly. */
+  background: transparent;
+}
+
+/* ---- Primary action override (modal footer) -------------------- */
+/* The base `.btn.primary` rule (in platform-console.css) already paints
+   a brand gradient, but inside the modal footer the surrounding dark
+   panel makes it look muted. We override with stronger contrast: a
+   full-saturation green, white-ish text shadow for readability, and
+   an obvious hover/active treatment. Disabled state stays muted but
+   keeps a clear lock affordance. */
+.pc-modal-foot .btn.primary {
+  background: linear-gradient(180deg, #18D39A 0%, #14B886 100%);
+  color: #042116;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border: 1px solid rgba(24, 211, 154, 0.55);
+  box-shadow: 0 8px 22px -8px rgba(24, 211, 154, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  padding: 9px 16px;
+  text-shadow: 0 0 0 transparent;
+  transition: transform 100ms ease, box-shadow 120ms ease, filter 120ms ease;
+}
+
+.pc-modal-foot .btn.primary:hover:not(:disabled) {
+  filter: brightness(1.06);
+  box-shadow: 0 10px 26px -8px rgba(24, 211, 154, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.pc-modal-foot .btn.primary:active:not(:disabled) {
+  transform: translateY(1px);
+  filter: brightness(0.98);
+}
+
+.pc-modal-foot .btn.primary:focus-visible {
+  outline: 2px solid rgba(24, 211, 154, 0.6);
+  outline-offset: 2px;
+}
+
+.pc-modal-foot .btn.primary:disabled {
+  /* Clearly not interactive, but keep the operator oriented: it stays
+     brand-tinted so they can find it, and the cursor + opacity say it
+     needs more input. */
+  background: linear-gradient(180deg, rgba(24, 211, 154, 0.25) 0%, rgba(20, 184, 134, 0.20) 100%);
+  color: rgba(255, 255, 255, 0.55);
+  border-color: rgba(24, 211, 154, 0.18);
+  box-shadow: none;
+  cursor: not-allowed;
+  filter: saturate(0.65);
+}
+
+/* Cancel button in the modal footer: clearly secondary, never competes
+   with the primary action visually. */
+.pc-modal-foot .btn.ghost {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #C7CFD9;
+  padding: 9px 16px;
+}
+
+.pc-modal-foot .btn.ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #ECF0F5;
+}
+
+/* ---- Form fields (Linear-inspired hierarchy) -------------------- */
+/*
+ * The form follows Linear's quiet-luxury pattern:
+ *   • Labels = eyebrow caption (small, muted, light tracking).
+ *   • Values = display weight, high-contrast ink (#ECF0F5).
+ *   • Inputs = surface tier 2 with hairline border (line at 7%).
+ *   • Focus = brand ring (4px alpha at 14%) — never glow.
+ *   • Hint = caption tier (text-mute, italicless).
+ */
+
+.pc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 14px;
+}
+
+.pc-field-label {
+  font-size: 10.5px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  color: var(--text-mute);
+  line-height: 1.4;
+}
+
+.pc-field-input,
+.pc-field-select,
+.pc-field-textarea {
+  /* Solid surface so an empty input still has clear contour and a
+     filled value never looks like text floating on the backdrop. */
+  background: #131A22;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #ECF0F5;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 450;
+  letter-spacing: -0.005em;
+  line-height: 1.4;
+  outline: none;
+  transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+  width: 100%;
+}
+
+.pc-field-input::placeholder,
+.pc-field-textarea::placeholder {
+  color: #5C6675;
+  font-weight: 400;
+}
+
+.pc-field-input:hover:not(:disabled),
+.pc-field-select:hover:not(:disabled),
+.pc-field-textarea:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.pc-field-input:focus,
+.pc-field-select:focus,
+.pc-field-textarea:focus {
+  border-color: rgba(24, 211, 154, 0.55);
+  box-shadow: 0 0 0 4px rgba(24, 211, 154, 0.14);
+  background: #16202A;
+}
+
+.pc-field-input:disabled,
+.pc-field-select:disabled,
+.pc-field-textarea:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.pc-field-textarea {
+  resize: vertical;
+  min-height: 88px;
+  line-height: 1.55;
+}
+
+.pc-field-hint {
+  font-size: 11px;
+  color: #5C6675;
+  line-height: 1.45;
+}
+
+.pc-field-error {
+  font-size: 11.5px;
+  color: var(--danger);
+  background: rgba(242, 85, 85, 0.08);
+  border: 1px solid rgba(242, 85, 85, 0.25);
+  padding: 8px 11px;
+  border-radius: 8px;
+  line-height: 1.45;
+}
+
+.pc-field-row {
+  display: grid;
+  /*
+   * minmax(0, 1fr) forces the column to honor its share even when the
+   * content (e.g. a long pre-filled email) would otherwise push the
+   * cell wider than its 1fr allocation. Without this, the input
+   * background visually "bleeds" into the next column — the exact
+   * regression the operator caught.
+   */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.pc-field {
+  min-width: 0;
+}
+
+.pc-field-input,
+.pc-field-select,
+.pc-field-textarea {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.pc-form-grid > div {
+  /* Sibling of the estimate aside; needs to allow itself to shrink so
+     the inner inputs never push the column past the grid template. */
+  min-width: 0;
+}
+
+/* ---- Section header (Linear-style lockup) ----------------------- */
+/* Each numbered section gets a header lockup: small brand-tinted
+   number pill + display-weight title + optional caption sub. The
+   header sits on top of a hairline divider — quiet, deliberate. */
+
+.pc-section-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0 14px;
+  margin: 22px 0 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.pc-section-head:first-child,
+.pc-form-grid > div > .pc-section-head:first-child,
+.pc-form-grid > div > *:first-child.pc-section-head {
+  margin-top: 0;
+}
+
+.pc-section-num {
+  display: inline-grid;
+  place-items: center;
+  min-width: 28px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: rgba(24, 211, 154, 0.08);
+  border: 1px solid rgba(24, 211, 154, 0.22);
+  color: #18D39A;
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.pc-section-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pc-section-title {
+  color: #ECF0F5;
+  font-family: 'Instrument Sans', 'Geist', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.pc-section-sub {
+  color: #8A95A4;
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+/* ---- Profile dropdown ------------------------------------------- */
+
+.pc-profile-popover {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 8px;
+  right: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  padding: 6px;
+  box-shadow: 0 20px 40px -20px rgba(0,0,0,0.7);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: pc-fadein 100ms;
+}
+
+.pc-profile-header {
+  padding: 10px 12px 8px;
+  border-bottom: 1px dashed var(--line-faint);
+  margin-bottom: 4px;
+}
+
+.pc-profile-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  text-align: left;
+  width: 100%;
+  font-family: inherit;
+}
+
+.pc-profile-row:hover {
+  background: rgba(255,255,255,0.04);
+  color: var(--text-hi);
+}
+
+.pc-profile-row:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pc-profile-row.danger:hover {
+  background: rgba(242,85,85,0.10);
+  color: var(--danger);
+}
+
+.pc-profile-meta {
+  font-size: 10.5px;
+  color: var(--text-mute);
+  margin-left: auto;
+}
+
+.sb-user.clickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sb-user.clickable:hover {
+  background: var(--surface-2);
+}
+
+/* ---- Sidebar collapse ------------------------------------------- */
+/*
+ * Two layouts share the same DOM:
+ *
+ *   1. Expanded (default)  — 248px wide, labels + section headings +
+ *      status footer visible.
+ *   2. Compact (.app-shell.compact) — 72px wide, ONLY icons. Every
+ *      text node (label, section heading, badge text, status rows,
+ *      user name) is hidden via `display: none` so nothing wraps and
+ *      no whitespace leaks into the layout. Active item gets a solid
+ *      pill instead of the left-bar gradient.
+ *
+ * Notes:
+ *  • These rules are UNCONDITIONAL — not inside a media query —
+ *    because the collapse is operator-driven, not viewport-driven.
+ *  • `.sidebar-label` was previously hidden only inside
+ *    `@media (max-width:1100px)` in platform-console.css. That caused
+ *    labels to stay visible on normal monitors. We override it here.
+ */
+
+.app-shell.compact {
+  grid-template-columns: 72px 1fr;
+}
+
+/* Brand → keep only the "R" mark, hide the name + subtitle. */
+.app-shell.compact .sb-brand {
+  padding: 16px 0 14px 0;
+  justify-content: center;
+}
+.app-shell.compact .sb-brand > div:nth-child(2) {
+  display: none;
+}
+
+/* Section labels (OPERAÇÃO, COMERCIAL, etc.) disappear entirely. */
+.app-shell.compact .sb-section-label {
+  display: none;
+}
+
+/* Menu item: centred icon, fixed square hit area, no flex gap. */
+.app-shell.compact .sb-item {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0;
+  padding: 0;
+  margin: 4px 10px;
+  width: calc(100% - 20px);
+  height: 40px;
+  border-radius: 10px;
+  position: relative;
+  overflow: visible;
+}
+
+/* HARD HIDE every text node inside an item while collapsed. */
+.app-shell.compact .sb-item .sidebar-label,
+.app-shell.compact .sb-item .sb-count {
+  display: none !important;
+}
+
+/* Drop the left brand-bar of the active item — replace with a solid pill. */
+.app-shell.compact .sb-item.active {
+  background: var(--surface-2);
+}
+.app-shell.compact .sb-item.active::before {
+  display: none;
+}
+
+/* Notification dot rendered as a real element in JSX (`<span class="sb-dot">`)
+   so it does not collide with the tooltip pseudo-element below. The dot
+   is invisible in expanded mode and only shows when an item has a
+   has-alert / has-warn class AND the shell is compact. */
+.sb-dot { display: none; }
+
+.app-shell.compact .sb-item.has-alert .sb-dot,
+.app-shell.compact .sb-item.has-warn .sb-dot {
+  display: block;
+  position: absolute;
+  top: 7px;
+  right: 9px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--danger);
+  border: 1.5px solid var(--bg-1);
+}
+.app-shell.compact .sb-item.has-warn .sb-dot {
+  background: var(--warning);
+}
+
+/* Footer rows + user card collapse to just the avatar. */
+.app-shell.compact .sb-status-row {
+  display: none;
+}
+.app-shell.compact .sb-footer {
+  padding: 10px 6px;
+  gap: 8px;
+}
+.app-shell.compact .sb-user {
+  padding: 6px;
+  justify-content: center;
+  background: transparent;
+  border: none;
+}
+.app-shell.compact .sb-user .grow {
+  display: none;
+}
+/* Hide the chevron next to the avatar (was visible at the right side of the row). */
+.app-shell.compact .sb-user > .lucide {
+  display: none;
+}
+
+/* Profile popover when collapsed: open to the RIGHT of the sidebar,
+   not above (no room). */
+.app-shell.compact .pc-profile-popover {
+  bottom: 0;
+  left: calc(100% + 10px);
+  right: auto;
+  width: 240px;
+}
+
+/* ---- Floating tooltip (uses :hover on icon-only items) --------- */
+/* Uses ::after to avoid conflict with the brand-bar ::before on
+   active items. Only visible in compact mode, where data-tip is set
+   on every menu item via JSX. */
+.app-shell.compact .sb-item[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: calc(100% + 14px);
+  top: 50%;
+  transform: translateY(-50%) translateX(-6px);
+  background: var(--surface-3);
+  border: 1px solid var(--line-strong);
+  color: var(--text-hi);
+  padding: 5px 10px;
+  border-radius: 7px;
+  font-size: 11.5px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 120ms, transform 120ms;
+  z-index: 60;
+  box-shadow: 0 8px 20px -8px rgba(0,0,0,0.7);
+}
+.app-shell.compact .sb-item:hover[data-tip]::after {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+
+/* But now we collide with the notification dot which I'd put on ::after.
+   Move dots to a span span so they never fight with the tooltip. */
+
+/* ---- Collapse toggle button (lives in the footer) -------------- */
+
+.sb-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: background 120ms, color 120ms, border-color 120ms;
+}
+
+.sb-toggle-btn:hover {
+  background: var(--surface-2);
+  color: var(--text-hi);
+  border-color: var(--line-strong);
+}
+
+.sb-toggle-btn:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.app-shell.compact .sb-toggle-btn {
+  width: 36px;
+  height: 36px;
+  margin: 0 auto;
+  padding: 0;
+}
+.app-shell.compact .sb-toggle-btn .sb-toggle-label {
+  display: none;
+}
+
+/* ---- Property picker / list -------------------------------------- */
+
+.pc-prop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 50vh;
+  overflow: auto;
+}
+
+.pc-prop-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  transition: border-color 120ms, background 120ms;
+}
+
+.pc-prop-row:hover {
+  border-color: var(--line-strong);
+  background: var(--surface-3);
+}
+
+.pc-prop-row .grow > div:first-child {
+  color: var(--text-hi);
+  font-weight: 500;
+  font-size: 12.5px;
+}
+
+.pc-prop-row .grow > div:last-child {
+  color: var(--text-mute);
+  font-size: 11px;
+}
+
+/* ---- ConsoleSelect ---------------------------------------------- */
+
+.pc-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 11px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--text-hi);
+  font-family: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 120ms, box-shadow 120ms;
+}
+
+.pc-select-trigger:hover:not(.disabled):not(.open) {
+  border-color: var(--line-strong);
+}
+
+.pc-select-trigger.open,
+.pc-select-trigger:focus-visible {
+  border-color: rgba(24, 211, 154, 0.55);
+  box-shadow: 0 0 0 3px rgba(24, 211, 154, 0.12);
+  outline: none;
+}
+
+.pc-select-trigger.disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.pc-select-value {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/*
+ * Popover lives outside #platform-console-root (portaled to body)
+ * so CSS custom properties from the Console scope don't resolve here
+ * — explicit hex colors keep the dropdown opaque on any background.
+ */
+.pc-select-popover {
+  z-index: 200;
+  background: #10151B;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 24px 48px -16px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(0, 0, 0, 0.4);
+  max-height: 280px;
+  overflow: auto;
+  animation: pc-fadein 90ms;
+  font-family: 'Geist', 'Inter', system-ui, sans-serif;
+  color: #C7CFD9;
+  /* No backdrop blur on the popover — keep it crisp + opaque. */
+  backdrop-filter: none;
+}
+
+.pc-select-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  color: #C7CFD9;
+  font-size: 12.5px;
+  cursor: pointer;
+  user-select: none;
+  background: transparent;
+}
+
+.pc-select-option:not(.disabled).hot,
+.pc-select-option:not(.disabled):hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ECF0F5;
+}
+
+.pc-select-option.active {
+  background: rgba(24, 211, 154, 0.10);
+  color: #18D39A;
+}
+
+.pc-select-option.active:not(.disabled).hot,
+.pc-select-option.active:not(.disabled):hover {
+  background: rgba(24, 211, 154, 0.16);
+  color: #ECF0F5;
+}
+
+.pc-select-option.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pc-select-option-label {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pc-select-option-meta {
+  font-size: 11px;
+  color: var(--text-mute);
+}
+
+/* ---- Module cards (provisioning) -------------------------------- */
+/* Modules sit on surface tier 2 with hairline borders. Hover lifts to
+   surface tier 3. Selected swaps to brand-tinted surface with a 1px
+   brand border + 6px insetshadow ring (subtle "checked" feel). */
+
+.pc-module-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.pc-module-grid.dense {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+.pc-module-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 14px;
+  background: #131A22;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  font-size: 12px;
+  color: #C7CFD9;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 120ms ease, background 120ms ease, box-shadow 120ms ease;
+}
+
+.pc-module-card:hover:not(.disabled):not(.locked) {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: #171E27;
+}
+
+.pc-module-card.selected {
+  border-color: rgba(24, 211, 154, 0.55);
+  background: rgba(24, 211, 154, 0.07);
+  color: #ECF0F5;
+  box-shadow: inset 0 0 0 1px rgba(24, 211, 154, 0.18);
+}
+
+.pc-module-card.selected:hover {
+  background: rgba(24, 211, 154, 0.10);
+}
+
+.pc-module-card.locked {
+  cursor: not-allowed;
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.pc-module-card.locked .pc-module-icon {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.pc-module-card.disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+/* Selected check (replaces the verbose "Adicional" badge from earlier sprints). */
+.pc-module-check {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  background: #18D39A;
+  color: #042116;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px -4px rgba(24, 211, 154, 0.4);
+}
+
+.pc-module-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.pc-module-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.pc-module-card.selected .pc-module-icon {
+  background: rgba(24, 211, 154, 0.12);
+  color: var(--brand);
+}
+
+.pc-module-name {
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  font-size: 10.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pc-module-flag {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-mute);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.pc-module-flag.locked {
+  background: rgba(242, 85, 85, 0.12);
+  color: var(--danger);
+}
+
+.pc-module-flag.included {
+  background: rgba(24, 211, 154, 0.12);
+  color: var(--brand);
+}
+
+.pc-module-flag.coming {
+  background: rgba(245, 165, 36, 0.10);
+  color: var(--warning);
+}
+
+.pc-module-flag.optional {
+  background: transparent;
+  color: var(--text-mute);
+}
+
+.pc-module-flag.recommended {
+  background: rgba(79, 139, 245, 0.10);
+  color: var(--info);
+}
+
+.pc-module-flag.addon {
+  background: rgba(183, 157, 255, 0.12);
+  color: #B79DFF;
+}
+
+/* Selected cards just show a clean check pill — no text noise. */
+.pc-module-check {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #06120D;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.pc-section-row {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-mute);
+  padding: 12px 0 8px;
+}
+
+/* ---- Channel chips ---------------------------------------------- */
+
+.pc-channel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 10px;
+}
+
+.pc-channel-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 14px;
+  background: #131A22;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #C7CFD9;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
+}
+
+.pc-channel-chip:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: #171E27;
+}
+
+.pc-channel-chip.selected {
+  border-color: rgba(24, 211, 154, 0.55);
+  background: rgba(24, 211, 154, 0.07);
+  color: #ECF0F5;
+  box-shadow: inset 0 0 0 1px rgba(24, 211, 154, 0.18);
+}
+
+.pc-channel-chip .check {
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: transparent;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.pc-channel-chip.selected .check {
+  background: #18D39A;
+  border-color: #18D39A;
+  color: #042116;
+  box-shadow: 0 4px 12px -4px rgba(24, 211, 154, 0.4);
+}
+
+/* ---- Estimate panel (Linear-style summary lockup) -------------- */
+/* Three tiers:
+ *   1. Header (eyebrow + caption).
+ *   2. Body rows (label muted left / value display-weight right).
+ *   3. Total band — surface-3 strip with brand-tinted total + first-invoice.
+ *   4. Footer note in caption.
+ */
+
+.pc-estimate-panel {
+  background: #10151B;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.pc-estimate-head {
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.pc-estimate-title {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #18D39A;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.pc-estimate-sub {
+  font-size: 11px;
+  color: #5C6675;
+  line-height: 1.45;
+}
+
+.pc-estimate-body {
+  padding: 8px 18px 12px;
+}
+
+.pc-estimate-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  font-size: 11.5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.pc-estimate-row:last-child {
+  border-bottom: none;
+}
+
+.pc-estimate-row .k {
+  color: #8A95A4;
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.10em;
+  font-weight: 500;
+}
+
+.pc-estimate-row .v {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  color: #ECF0F5;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pc-estimate-totals {
+  background: linear-gradient(180deg, rgba(24, 211, 154, 0.04), rgba(24, 211, 154, 0));
+  border-top: 1px solid rgba(24, 211, 154, 0.18);
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pc-estimate-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.pc-estimate-total-row .k {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+  color: #8A95A4;
+  font-weight: 500;
+}
+
+.pc-estimate-total-row.primary .k {
+  color: #C7CFD9;
+}
+
+.pc-estimate-total-row .v {
+  font-family: 'Instrument Sans', 'Geist', sans-serif;
+  color: #ECF0F5;
+  font-size: 14px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.pc-estimate-total-row.primary .v {
+  color: #18D39A;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+}
+
+.pc-estimate-foot {
+  padding: 12px 18px 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 11px;
+  color: #5C6675;
+  line-height: 1.5;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.pc-estimate-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 5px;
+  background: rgba(245, 165, 36, 0.10);
+  border: 1px solid rgba(245, 165, 36, 0.22);
+  color: #F5A524;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.pc-estimate-status-badge.active {
+  background: rgba(24, 211, 154, 0.10);
+  border-color: rgba(24, 211, 154, 0.25);
+  color: #18D39A;
+}
+
+.pc-form-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 18px;
+  align-items: start;
+}
+
+.pc-form-grid .pc-estimate-aside {
+  position: sticky;
+  top: 4px;
+  align-self: start;
+}
+
+@media (max-width: 980px) {
+  .pc-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .pc-form-grid .pc-estimate-aside {
+    position: static;
+  }
+}
+
+.pc-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--brand);
+  padding: 12px 16px;
+  border-radius: 8px;
+  box-shadow: 0 12px 30px -10px rgba(0,0,0,0.5);
+  font-size: 12px;
+  color: var(--text-hi);
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 360px;
+  animation: pc-fadein 120ms;
+}
+
+.pc-toast.danger { border-left-color: var(--danger); }
+.pc-toast.warn   { border-left-color: var(--warning); }
+.pc-toast.info   { border-left-color: var(--info); }

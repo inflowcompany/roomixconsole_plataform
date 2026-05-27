@@ -1,0 +1,32 @@
+{
+  "name": "roomix-platform-console",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Roomix Platform Console — sistema interno independente da equipe Roomix. Não faz parte do SaaS do cliente.",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "build:app": "vite build",
+    "lint": "tsc --noEmit",
+    "preview": "vite preview --port 5174",
+    "smoke": "tsx scripts/build-smoke.ts"
+  },
+  "dependencies": {
+    "lucide-react": "^0.546.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^5.0.4",
+    "tsx": "^4.21.0",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0"
+  }
+}
