@@ -15,26 +15,27 @@
 // A lógica nova permanece intacta:
 //   • Lista de agentes vem do registry (`useAgents`), com 13 agentes
 //     declarados em `agentRegistry.ts`.
-//   • Aprovações vêm do payload do aggregator (`useConsoleData`) —
-//     fallback `demoOverview.approvals` quando o backend não retorna.
+//   • Aprovações vêm do endpoint real `/api/platform/approvals`
+//     (serviço `approvalsApi`). Sem fallback de mock: se o backend
+//     falhar, o painel mostra um banner de erro honesto.
 //   • Permissões são derivadas do registry: reads → "permitido",
 //     proposes → "requer aprovação", blockedSensitive → "negado".
 //   • Skills, fontes de dados, ações sensíveis e risco vêm direto do
 //     registry — UI somente renderiza o que está declarado.
 //
-// Os botões "Aprovar" / "Pausar" / "Config" são puramente visuais
-// nesta sprint: nenhum executa ação real (todas as mutações sensíveis
-// continuam bloqueadas por design).
+// Os botões "Aprovar" / "Rejeitar" do painel de aprovações chamam o
+// backend real (`POST /api/platform/approvals/:id/approve|reject`).
+// Aprovar dispara o dispatcher server-side; o Console nunca executa a
+// ação por conta própria. "Pausar" / "Config" usam o PATCH de status.
 
 import React, { useCallback, useEffect, useState } from "react";
-import { Badge, Icon, Panel, RiskPill, SectionHeader, SevBadge } from "../components";
+import { Badge, Icon, Panel, RiskPill, SectionHeader } from "../components";
 import { useAgents } from "../agents/useAgents";
 import { STATUS_LABEL } from "../agents/agentCapabilities";
-import { useConsoleData } from "../hooks/useConsoleData";
 import { useToast } from "../components/Toast";
 import { AgentConfigModal } from "../components/AgentConfigModal";
 import { agentsApi } from "../services/agentsApi";
-import type { ApprovalRequest } from "../types";
+import { approvalsApi, type PlatformApprovalRequest } from "../services/approvalsApi";
 
 const STATUS_TONE: Record<string, "success" | "warning" | "danger" | "info"> = {
   connected: "success",
@@ -50,12 +51,31 @@ const STATUS_LITERAL: Record<string, string> = {
   "config-required": "Config pendente",
 };
 
+// Compact relative timestamp for an ISO date (pt-BR). Falls back to the raw
+// value if it cannot be parsed.
+function formatWhen(iso: string): string {
+  const ts = Date.parse(iso);
+  if (Number.isNaN(ts)) return iso;
+  const diffMs = Date.now() - ts;
+  const min = Math.floor(diffMs / 60000);
+  if (min < 1) return "agora";
+  if (min < 60) return `há ${min} min`;
+  const hours = Math.floor(min / 60);
+  if (hours < 24) return `há ${hours}h`;
+  return new Date(ts).toLocaleDateString("pt-BR");
+}
+
 export function ViewAgents() {
   const { agents, source, refresh, loading } = useAgents();
-  const { data } = useConsoleData();
   const toast = useToast();
   const [configOpen, setConfigOpen] = useState(false);
   const [busyToggle, setBusyToggle] = useState(false);
+
+  // Real approval queue — /api/platform/approvals. No mock fallback.
+  const [approvals, setApprovals] = useState<PlatformApprovalRequest[]>([]);
+  const [approvalsLoading, setApprovalsLoading] = useState(true);
+  const [approvalsError, setApprovalsError] = useState<string | null>(null);
+  const [busyApprovalId, setBusyApprovalId] = useState<string | null>(null);
 
   const [selected, setSelected] = useState<string>(agents[0]?.definition.id ?? "");
 
@@ -67,19 +87,80 @@ export function ViewAgents() {
   }, [agents, selected]);
 
   const current = agents.find((a) => a.definition.id === selected) ?? agents[0];
-  const approvals: ApprovalRequest[] = data.approvals ?? [];
+
+  // Load the real pending approval queue from the backend.
+  const loadApprovals = useCallback(async () => {
+    setApprovalsLoading(true);
+    try {
+      const { requests } = await approvalsApi.list("pending");
+      setApprovals(requests);
+      setApprovalsError(null);
+    } catch (err) {
+      const code = err instanceof Error ? err.message : "FAILED";
+      setApprovalsError(code);
+    } finally {
+      setApprovalsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadApprovals();
+  }, [loadApprovals]);
+
+  // Approve → backend dispatcher executes the action server-side.
+  const handleApprove = useCallback(
+    async (ap: PlatformApprovalRequest) => {
+      setBusyApprovalId(ap.id);
+      try {
+        const { execution } = await approvalsApi.approve(ap.id);
+        if (execution.status === "executed") {
+          toast.show(`Aprovado e executado: ${ap.actionType}`, "brand");
+        } else if (execution.status === "failed") {
+          toast.show(`Aprovado, mas execução falhou: ${execution.error || "erro"}`, "warn");
+        } else {
+          toast.show(`Aprovado: ${ap.actionType} (sem execução)`, "info");
+        }
+        await loadApprovals();
+      } catch (err) {
+        const code = err instanceof Error ? err.message : "FAILED";
+        toast.show(`Falha ao aprovar: ${code}`, "danger");
+      } finally {
+        setBusyApprovalId(null);
+      }
+    },
+    [loadApprovals, toast],
+  );
+
+  // Reject → no side effect, just audited.
+  const handleReject = useCallback(
+    async (ap: PlatformApprovalRequest) => {
+      setBusyApprovalId(ap.id);
+      try {
+        await approvalsApi.reject(ap.id);
+        toast.show(`Proposta rejeitada: ${ap.actionType}`, "warn");
+        await loadApprovals();
+      } catch (err) {
+        const code = err instanceof Error ? err.message : "FAILED";
+        toast.show(`Falha ao rejeitar: ${code}`, "danger");
+      } finally {
+        setBusyApprovalId(null);
+      }
+    },
+    [loadApprovals, toast],
+  );
 
   // Atualizar — re-fetch real do endpoint /api/platform/agents/status
   // com toast honesto se o runtime ainda não está conectado.
   const handleRefresh = useCallback(() => {
     refresh();
+    void loadApprovals();
     toast.show(
       source === "backend"
         ? "Status dos agentes atualizado"
         : "Runtime ainda não conectado · usando registry como referência",
       source === "backend" ? "brand" : "info",
     );
-  }, [refresh, source, toast]);
+  }, [refresh, source, toast, loadApprovals]);
 
   // Pausar / Retomar — usa o PATCH real. Quando o runtime ainda não
   // tem o agente registrado, o backend cria o registro on-the-fly e
@@ -142,65 +223,90 @@ export function ViewAgents() {
         }
       />
 
-      {/* APROVAÇÕES HUMANAS PENDENTES (restored from Cloud Design) */}
-      <Panel title="Aprovações humanas pendentes" icon="hand" sub={`${approvals.length} aguardando`}>
-        {approvals.length === 0 ? (
+      {/* APROVAÇÕES HUMANAS PENDENTES — fila real /api/platform/approvals */}
+      <Panel
+        title="Aprovações humanas pendentes"
+        icon="hand"
+        sub={approvalsLoading ? "carregando…" : `${approvals.length} aguardando`}
+      >
+        {approvalsError ? (
+          <div className="notice danger">
+            <Icon name="x-circle" size={14} />
+            <span>
+              Falha ao carregar a fila de aprovações: <span className="mono">{approvalsError}</span>. Requer
+              sessão de superadmin.{" "}
+              <button className="btn ghost sm" type="button" onClick={() => void loadApprovals()}>
+                <Icon name="refresh-cw" size={11} /> Tentar novamente
+              </button>
+            </span>
+          </div>
+        ) : null}
+        {!approvalsError && approvals.length === 0 ? (
           <div className="muted text-xs" style={{ padding: "12px 0" }}>
-            Nenhuma aprovação pendente no momento.
+            {approvalsLoading ? "Carregando aprovações…" : "Nenhuma aprovação pendente no momento."}
           </div>
-        ) : (
+        ) : null}
+        {!approvalsError && approvals.length > 0 ? (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 10 }}>
-            {approvals.map((ap) => (
-              <div key={ap.id} className={`approval-card ${ap.sev === "crit" ? "crit" : ""}`}>
-                <div className="row-between">
-                  <div className="row" style={{ gap: 8 }}>
-                    <Icon
-                      name={ap.sev === "crit" ? "alert-octagon" : "alert-triangle"}
-                      size={14}
-                      color={ap.sev === "crit" ? "var(--danger)" : "var(--warning)"}
-                    />
-                    <SevBadge sev={ap.sev} />
+            {approvals.map((ap) => {
+              const crit = ap.riskLevel === "high";
+              const busy = busyApprovalId === ap.id;
+              return (
+                <div key={ap.id} className={`approval-card ${crit ? "crit" : ""}`}>
+                  <div className="row-between">
+                    <div className="row" style={{ gap: 8 }}>
+                      <Icon
+                        name={crit ? "alert-octagon" : "alert-triangle"}
+                        size={14}
+                        color={crit ? "var(--danger)" : "var(--warning)"}
+                      />
+                      <RiskPill risk={ap.riskLevel} />
+                    </div>
+                    <span className="mono muted text-xs">{formatWhen(ap.createdAt)}</span>
                   </div>
-                  <span className="mono muted text-xs">{ap.requestedAt}</span>
-                </div>
-                <div className="hi" style={{ fontSize: 13, fontWeight: 500 }}>
-                  {ap.title}
-                </div>
-                <div className="text-xs dim" style={{ lineHeight: 1.45 }}>
-                  {ap.desc}
-                </div>
-                <div className="text-xs muted" style={{ borderTop: "1px solid var(--line-faint)", paddingTop: 6 }}>
-                  <div>
-                    <span className="muted">Solicitado por:</span>{" "}
-                    <span className="mono hi">{ap.requested}</span>
+                  <div className="hi mono" style={{ fontSize: 13, fontWeight: 500 }}>
+                    {ap.actionType}
                   </div>
-                  <div style={{ marginTop: 2 }}>
-                    <span className="muted">Impacto:</span> {ap.impact}
+                  <div className="text-xs dim" style={{ lineHeight: 1.45 }}>
+                    {ap.reason || "Sem descrição informada."}
+                  </div>
+                  <div className="text-xs muted" style={{ borderTop: "1px solid var(--line-faint)", paddingTop: 6 }}>
+                    <div>
+                      <span className="muted">Solicitado por:</span>{" "}
+                      <span className="mono hi">{ap.proposedByActor}</span>
+                    </div>
+                    <div style={{ marginTop: 2 }}>
+                      <span className="muted">Escopo:</span>{" "}
+                      {ap.propertyId ? `propriedade ${ap.propertyId}` : "plataforma"}
+                    </div>
+                  </div>
+                  <div className="row" style={{ gap: 6 }}>
+                    <button
+                      className="btn primary grow"
+                      type="button"
+                      style={{ justifyContent: "center" }}
+                      onClick={() => void handleApprove(ap)}
+                      disabled={busy}
+                      title="Aprovar — dispara a execução server-side"
+                    >
+                      <Icon name="check" size={12} /> {busy ? "…" : "Aprovar"}
+                    </button>
+                    <button
+                      className="btn ghost"
+                      type="button"
+                      style={{ justifyContent: "center" }}
+                      onClick={() => void handleReject(ap)}
+                      disabled={busy}
+                      title="Rejeitar — nenhum efeito colateral"
+                    >
+                      <Icon name="x" size={12} />
+                    </button>
                   </div>
                 </div>
-                <div className="row" style={{ gap: 6 }}>
-                  {/* Buttons are visual-only this sprint — every sensitive
-                      action requires a human approval flow which is not
-                      wired yet. Clicking does nothing on purpose. */}
-                  <button
-                    className="btn primary grow"
-                    type="button"
-                    style={{ justifyContent: "center" }}
-                    title="Aprovação humana real ainda não habilitada"
-                  >
-                    <Icon name="check" size={12} /> Aprovar
-                  </button>
-                  <button className="btn ghost" type="button" style={{ justifyContent: "center" }} title="Rejeitar (em breve)">
-                    <Icon name="x" size={12} />
-                  </button>
-                  <button className="btn ghost" type="button" style={{ justifyContent: "center" }} title="Comentar (em breve)">
-                    <Icon name="message-square" size={12} />
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
-        )}
+        ) : null}
       </Panel>
 
       {/* Lista de Agentes + Detalhe */}

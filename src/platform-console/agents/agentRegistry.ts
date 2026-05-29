@@ -124,10 +124,16 @@ export const AGENT_REGISTRY: AgentRegistry = [
       "incident.prioritize",
       "agent.coordinate",
       "approval.gate",
+      // PoC Fase 1 — ações reais exercidas pelo runtime roomix-agents:
+      "health.read",
+      "insight.publish",
     ],
     permissions: {
-      reads: ["overview", "agents.status", "audit-logs", "incidents"],
-      proposes: ["sprint.create", "incident.escalate", "agent.start"],
+      // health.read é a leitura permitida (inerte) do PoC.
+      reads: ["overview", "agents.status", "audit-logs", "incidents", "health.read"],
+      // insight.publish é a única gated wired ponta-a-ponta na Fase 1;
+      // overbooking.resolve é gated mas execução não-wired (etapa posterior).
+      proposes: ["sprint.create", "incident.escalate", "agent.start", "insight.publish", "overbooking.resolve"],
       blockedSensitive: SENSITIVE_GLOBAL,
     },
     risk: "medium",

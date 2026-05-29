@@ -345,13 +345,10 @@ const agents: ConsoleOverview["agents"] = [
   { id: "ag_jarvis", name: "Jarvis Orchestrator", role: "Roteamento e coordenação multi-agent", status: "active", task: "Roteando 14 tarefas · 9 agentes ativos", last: "agora", actions: 318, risk: "medium", icon: "cpu", prop: "—" },
 ];
 
-const approvals: ConsoleOverview["approvals"] = [
-  { id: "ap1", sev: "crit", title: "Ativar Channel Manager em production", desc: "Pousada Teste Maryna · sair de Homologation Mode. OTA real será ligada.", requested: "channel-manager-agent", requestedAt: "há 12 min", impact: "Webhooks reais Booking + Airbnb. HMAC gate verificado." },
-  { id: "ap2", sev: "crit", title: "Reprocessar reserva externa", desc: "Webhook ABB-220114 com payload divergente · risco de overbooking duplo.", requested: "operations-agent", requestedAt: "há 22 min", impact: "Replay seguro em sandbox, criação real após confirmação." },
-  { id: "ap3", sev: "warn", title: "Ativar gateway de pagamentos", desc: "Villa Atlântica · trial dia 4/14. Cobranças reais serão habilitadas.", requested: "billing-agent", requestedAt: "há 1h", impact: "Stripe Connect production · 3DS obrigatório." },
-  { id: "ap4", sev: "crit", title: "Resolver overbooking crítico", desc: "Pousada Teste Maryna UH 204 · realocar BKG-882711 para UH 207.", requested: "operations-agent", requestedAt: "há 4 min", impact: "Comunicação automática ao hóspede após aprovação." },
-  { id: "ap5", sev: "warn", title: "Enviar comunicado a hóspede", desc: "Template \"realocação\" para 1 hóspede · Booking BKG-882711.", requested: "communication-agent", requestedAt: "há 3 min", impact: "E-mail + WhatsApp (PT-BR). Sem custos adicionais." },
-];
+// The approval queue is no longer mocked. The Agents view reads the real
+// queue from /api/platform/approvals via `approvalsApi`; this stays empty so
+// the demo overview never injects fake "activate production" approvals.
+const approvals: ConsoleOverview["approvals"] = [];
 
 const clients: ConsoleOverview["clients"] = [
   { id: "c1", name: "Sol Group Hotelaria", property: "Porto do Sol Resort", plan: "Enterprise", mrr: 3490, status: "paid", next: "01 jun", last: "01 mai", units: 88, addons: ["FNRH", "CM Pro", "Direct"], risk: null },
