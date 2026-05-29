@@ -61,6 +61,27 @@ export default defineConfig(({ mode }) => {
       // a 403. The Console is gated by authentication anyway, and the
       // request would have already passed the CDN / proxy ACL.
       allowedHosts: true,
+      // Homologation: the Console is served standalone by `vite preview`
+      // on its own Railway domain, with NO reverse proxy in front. Mirror
+      // the dev-server proxy so `/api` reaches the SaaS backend
+      // (VITE_ROOMIX_API_BASE) and cookies stay first-party. Origin/Referer
+      // are pinned to the SaaS origin so the backend CSRF gate passes —
+      // identical behavior to the dev proxy above.
+      proxy: {
+        "/api": {
+          target: saasOrigin,
+          changeOrigin: true,
+          secure: false,
+          configure: (proxy) => {
+            proxy.on("proxyReq", (proxyReq) => {
+              proxyReq.setHeader("origin", saasOrigin);
+              if (proxyReq.getHeader("referer")) {
+                proxyReq.setHeader("referer", saasOrigin + "/");
+              }
+            });
+          },
+        },
+      },
     },
     build: {
       outDir: "dist",
